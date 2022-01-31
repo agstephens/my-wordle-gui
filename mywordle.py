@@ -13,6 +13,7 @@ $ python mywordle.py
 """
 
 import sys
+import os
 import string
 import requests
 import random
@@ -24,6 +25,7 @@ cell_size = (2, 1)
 CLOSE, RESTART = "CLOSE", "RESTART"
 FIRST_WORD = "cigar"
 letters = string.ascii_letters
+words_cache = "words.txt"
 
 bg_clear, bg_correct, bg_near = "white", "green", "orange"
 
@@ -34,10 +36,20 @@ grid = None
 target = None
 
 def load_words():
+  if os.path.isfile(words_cache):
+    print("[INFO] Reading from cached words.")
+    return open(words_cache).read().split()
+
   content = requests.get("https://www.powerlanguage.co.uk/wordle/main.e65ce0a5.js").text
   start = content.find(f'["{FIRST_WORD}"')
   end = start + content[start:].find("]") + 1
-  return eval(content[start:end])
+  words = eval(content[start:end])
+
+  # Write to cache
+  with open(words_cache, "w") as writer:
+    writer.write(" ".join(words))
+
+  return words
 
 def get_word(y):
   return "".join([grid[y][x].get() for x in range(n_cols)]).lower()
@@ -47,8 +59,19 @@ def set_focus(x, y):
   focus = x, y
 
   if window:
-    window["position"].update(f"{get_focus()}")
-    # Attempt at highlighting: window[f"cell_{x}_{y}"].Widget.configure(highlightcolor='red', highlightthickness=2)
+    window["position"].update(f"({x}, {y})")
+    highlight(x, y)
+
+def highlight(x, y):
+    for i in range(n_cols):
+      if i == x:
+        window[f"cell_{i}_{y}"].Widget.configure(highlightbackground='black', highlightthickness=2)
+      else:
+        window[f"cell_{i}_{y}"].Widget.configure(highlightthickness=0)
+
+    # Tidy last row
+    if x == 0 and y > 0:
+      window[f"cell_{n_cols-1}_{y-1}"].Widget.configure(highlightthickness=0) 
 
 def get_focus():
   return focus
@@ -148,6 +171,16 @@ def submit_word():
 
 def retreat():
   x, y = get_focus()
+  # If empty and not first cell
+  if not get_cell_value(x, y) and x != 0: 
+    set_focus(x-1, y)
+
+  # Empty current
+  x, y = get_focus()
+  update_cell(x, y, clear=True)
+
+
+def OLD():
   if x == 0:
     update_cell(x, y, clear=True)
   elif get_cell_value(x, y):
