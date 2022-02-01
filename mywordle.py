@@ -23,7 +23,7 @@ import PySimpleGUI as sg
 n_rows, n_cols = 6, 5
 cell_size = (2, 1)
 CLOSE, RESTART = "CLOSE", "RESTART"
-FIRST_WORD = "cigar"
+FIRST_WORDS_OF_ARRAYS = "cigar", "aahed"
 letters = string.ascii_letters
 words_cache = "words.txt"
 
@@ -35,15 +35,27 @@ window = None
 grid = None
 target = None
 
+
+def extract_word_lists(content):
+  words = []
+
+  for first_word in FIRST_WORDS_OF_ARRAYS:
+    start = content.find(f'["{first_word}"')
+    end = start + content[start:].find("]") + 1
+    words.extend(eval(content[start:end]))
+
+  return words
+
 def load_words():
   if os.path.isfile(words_cache):
     print("[INFO] Reading from cached words.")
     return open(words_cache).read().split()
 
   content = requests.get("https://www.powerlanguage.co.uk/wordle/main.e65ce0a5.js").text
-  start = content.find(f'["{FIRST_WORD}"')
-  end = start + content[start:].find("]") + 1
-  words = eval(content[start:end])
+  words = extract_word_lists(content)
+#  start = content.find(f'["{FIRST_WORD}"')
+#  end = start + content[start:].find("]") + 1
+#  words = eval(content[start:end])
 
   # Write to cache
   with open(words_cache, "w") as writer:
@@ -123,7 +135,7 @@ def init():
   if not words:
     words = ["cigar", "ooooo"] 
     words = load_words()
-    assert(words[0] == FIRST_WORD)
+    assert(words[0] == FIRST_WORDS_OF_ARRAYS[0])
     print(f"First word is as expected - words loaded :-)")
 
   target = random.choice(words)
