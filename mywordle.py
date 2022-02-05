@@ -29,6 +29,7 @@ words_cache = "words.txt"
 
 bg_clear, bg_correct, bg_near = "white", "green", "orange"
 
+words_to_use_max_index = None
 words = None
 focus = None
 window = None
@@ -37,12 +38,18 @@ target = None
 
 
 def extract_word_lists(content):
+  global words_to_use_max_index
   words = []
 
   for first_word in FIRST_WORDS_OF_ARRAYS:
     start = content.find(f'["{first_word}"')
     end = start + content[start:].find("]") + 1
-    words.extend(eval(content[start:end]))
+
+    _words = eval(content[start:end])
+    if not words_to_use_max_index:
+        words_to_use_max_index = len(_words)
+
+    words.extend(_words)
 
   return words
 
@@ -53,9 +60,6 @@ def load_words():
 
   content = requests.get("https://www.powerlanguage.co.uk/wordle/main.e65ce0a5.js").text
   words = extract_word_lists(content)
-#  start = content.find(f'["{FIRST_WORD}"')
-#  end = start + content[start:].find("]") + 1
-#  words = eval(content[start:end])
 
   # Write to cache
   with open(words_cache, "w") as writer:
@@ -133,12 +137,11 @@ def init():
   global words, window, grid, target
 
   if not words:
-    words = ["cigar", "ooooo"] 
     words = load_words()
     assert(words[0] == FIRST_WORDS_OF_ARRAYS[0])
     print(f"First word is as expected - words loaded :-)")
 
-  target = random.choice(words)
+  target = random.choice(words[:words_to_use_max_index])
 
   # Create new window and grid
   if window: window.close()
